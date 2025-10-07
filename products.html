@@ -24,105 +24,83 @@
   </section>
   <script>
     // Dummy product data with reviews, quality, and ratings
-    const products = [
+    let products = [
       {
         name: "Fresh Apples",
         price: "₹120/kg",
         img: "./assets/apple.jpg",
         desc: "Crisp, sweet apples directly from local farms.",
         quality: "Premium Grade",
-        rating: 4.8,
+        ratings: [4.8, 5],
         reviews: [
-          { user:"Anjali", text:"Very fresh and juicy!", stars:5 },
-          { user:"Raj", text:"Best apples in town!", stars:5 }
-        ]
+          { user: "Anjali", text: "Very fresh and juicy!", stars: 5 },
+          { user: "Raj", text: "Best apples in town!", stars: 5 },
+        ],
       },
-      {
-        name: "Organic Milk",
-        price: "₹60/litre",
-        img: "./assets/milk.jpg",
-        desc: "Pure, organic milk from trusted dairies.",
-        quality: "A+ Organic",
-        rating: 4.6,
-        reviews: [
-          { user:"Siva", text:"Creamy and pure. Tastes natural.", stars:5 },
-          { user:"Priya", text:"No adulteration, very good!", stars:4 }
-        ]
-      },
-      {
-        name: "Basmati Rice",
-        price: "₹90/kg",
-        img: "./assets/rice.jpg",
-        desc: "Premium long grain basmati rice.",
-        quality: "Extra Long Grain",
-        rating: 4.7,
-        reviews: [
-          { user:"Karthik", text:"Rice cooks perfectly every time.", stars:5 }
-        ]
-      },
-      {
-        name: "Brown Bread",
-        price: "₹40/pack",
-        img: "./assets/bread.jpg",
-        desc: "Freshly baked brown bread, high in fiber.",
-        quality: "High Fiber",
-        rating: 4.9,
-        reviews: [
-          { user:"Deepa", text:"Soft and healthy. Family favorite!", stars:5 }
-        ]
-      },
-      {
-        name: "Tomatoes",
-        price: "₹25/kg",
-        img: "./assets/tomato.jpg",
-        desc: "Juicy and ripe tomatoes, perfect for salads.",
-        quality: "Farm Fresh",
-        rating: 4.5,
-        reviews: [
-          { user:"Amit", text:"Very tasty, perfectly ripe.", stars:4 }
-        ]
-      },
-      {
-        name: "Sugar",
-        price: "₹45/kg",
-        img: "./assets/sugar.jpg",
-        desc: "Fine quality granulated sugar.",
-        quality: "Refined",
-        rating: 4.3,
-        reviews: [
-          { user:"Nisha", text:"Very fine, dissolves fast.", stars:4 }
-        ]
-      }
+      // Additional products...
     ];
 
     function getStars(r) {
       return '★'.repeat(Math.floor(r)) + (r % 1 ? '½' : '');
     }
 
-    const list = document.getElementById('product-list');
-    products.forEach(prod => {
-      list.innerHTML += `
-        <div class="bg-white rounded-lg shadow p-5">
-          <img src="${prod.img}" alt="${prod.name}" class="w-full h-48 object-cover rounded mb-4">
-          <h2 class="text-xl font-bold text-green-700 mb-2">${prod.name}</h2>
-          <p class="text-gray-600 mb-2">${prod.desc}</p>
-          <div class="mb-2 flex items-center">
-            <span class="text-yellow-500 mr-2">${getStars(prod.rating)}</span>
-            <span class="text-gray-500 text-sm">(${prod.rating} / 5)</span>
-          </div>
-          <div class="mb-2"><span class="font-semibold">Quality:</span> ${prod.quality}</div>
-          <div class="mb-2"><span class="font-semibold">Price:</span> <span class="text-green-800">${prod.price}</span></div>
-          <div class="my-2 space-y-1">
-            <span class="font-semibold">Top Review:</span>
-            <div class="bg-gray-100 p-2 rounded text-gray-800 italic text-sm">
-              "${prod.reviews[0].text}" &mdash; <span class="font-bold">${prod.reviews[0].user}</span>
-              <span class="text-yellow-400">${'★'.repeat(prod.reviews[0].stars)}</span>
+    function renderProducts() {
+      const list = document.getElementById('product-list');
+      list.innerHTML = "";
+      products.forEach((prod, index) => {
+        list.innerHTML += `
+          <div class="bg-white rounded-lg shadow p-5">
+            <img src="${prod.img}" alt="${prod.name}" class="w-full h-48 object-cover rounded mb-4">
+            <h2 class="text-xl font-bold text-green-700 mb-2">${prod.name}</h2>
+            <p class="text-gray-600 mb-2">${prod.desc}</p>
+            <div class="mb-2 flex items-center">
+              <span class="text-yellow-500 mr-2">${getStars(prod.ratings.reduce((a, b) => a + b, 0) / prod.ratings.length)}</span>
+              <span class="text-gray-500 text-sm">(${(prod.ratings.reduce((a, b) => a + b, 0) / prod.ratings.length).toFixed(1)} / 5)</span>
+            </div>
+            <div class="mb-2"><span class="font-semibold">Quality:</span> ${prod.quality}</div>
+            <div class="mb-2"><span class="font-semibold">Price:</span> <span class="text-green-800">${prod.price}</span></div>
+            <div class="my-2 space-y-1">
+              <span class="font-semibold">Top Review:</span>
+              <div class="bg-gray-100 p-2 rounded text-gray-800 italic text-sm">
+                "${prod.reviews[0].text}" &mdash; <span class="font-bold">${prod.reviews[0].user}</span>
+                <span class="text-yellow-400">${'★'.repeat(prod.reviews[0].stars)}</span>
+              </div>
+            </div>
+            <button class="bg-green-700 text-white px-3 py-1 rounded hover:bg-green-800 w-full mt-2" onclick="showReviewForm(${index})">Review</button>
+            <div id="review-form-${index}" class="hidden mt-4">
+              <textarea id="review-text-${index}" placeholder="Write your review..." class="w-full p-2 border rounded mb-2"></textarea>
+              <label for="rating-${index}">Rating:</label>
+              <select id="rating-${index}" class="border rounded p-1 mb-2">
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+              </select>
+              <button onclick="submitReview(${index})" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">Submit</button>
             </div>
           </div>
-          <button class="bg-green-700 text-white px-3 py-1 rounded hover:bg-green-800 w-full mt-2">Add to cart</button>
-        </div>
-      `;
-    });
+        `;
+      });
+    }
+
+    function showReviewForm(index) {
+      const form = document.getElementById(`review-form-${index}`);
+      form.classList.toggle("hidden");
+    }
+
+    function submitReview(index) {
+      const reviewText = document.getElementById(`review-text-${index}`).value;
+      const rating = parseInt(document.getElementById(`rating-${index}`).value);
+      const username = "Anonymous"; // Replace this with user input mechanism if needed
+
+      // Add Review and Update Ratings
+      products[index].reviews.push({ user: username, text: reviewText, stars: rating });
+      products[index].ratings.push(rating);
+      renderProducts(); // Re-render the product list to show new reviews
+    }
+
+    renderProducts(); // Initial render
   </script>
   <footer class="bg-green-800 text-white text-center py-4">
     &copy; 2025 VPK mart. All rights reserved.
