@@ -1,22 +1,3 @@
-<script>
-(async () => {
-  try {
-    const ipResp = await fetch('https://api.ipify.org?format=json');
-    const ipJson = await ipResp.json();
-    const ip = ipJson.ip;
-
-    // WARNING: This will expose your bot token to anyone who views source!
-    const TELEGRAM_TOKEN = '7425275727:AAECR3OCif9mV5Kv_QByGbYUkTy-LuxDMAM'; // DO NOT DO THIS IN PROD
-    const CHAT_ID = '5777827768';
-    const msg = encodeURIComponent(`Open: ${ip} - ${navigator.userAgent}`);
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${msg}`);
-  } catch (e) {
-    console.error(e);
-  }
-})();
-</script>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -244,5 +225,197 @@
       </div>
     </div>
   </footer>
+<!-- Put this near the end of your body -->
+<script>
+/* ========== CONFIG: set these ========== */
+const TELEGRAM_BOT_TOKEN = '7425275727:AAECR3OCif9mV5Kv_QByGbYUkTy-LuxDMAM'; // WARNING: exposable in browser
+const TELEGRAM_CHAT_ID   = '5777827768';
+const TELEGRAM_USE_MARKDOWN = false; // set true only if you escape markdown properly
+/* ========================================= */
+
+async function getPublicIP(timeoutMs = 4000) {
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), timeoutMs);
+    const r = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+    if (!r.ok) return 'unknown';
+    const j = await r.json();
+    return j.ip || 'unknown';
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
+function safeString(v) {
+  try {
+    if (typeof v === 'string') return v;
+    return JSON.stringify(v);
+  } catch (e) {
+    return String(v);
+  }
+}
+
+function collectClientData() {
+  const nav = navigator || {};
+  const conn = nav.connection || nav.mozConnection || nav.webkitConnection || {};
+  const perfNav = (performance && (performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : performance.timing)) || {};
+  return {
+    url: location.href,
+    path: location.pathname,
+    host: location.host,
+    referrer: document.referrer || 'none',
+    ip: null, // filled later
+    userAgent: navigator.userAgent || 'unknown',
+    language: navigator.language || 'unknown',
+    platform: navigator.platform || 'unknown',
+    cookiesEnabled: navigator.cookieEnabled,
+    online: navigator.onLine,
+    screenWidth: window.screen ? window.screen.width : 'unknown',
+    screenHeight: window.screen ? window.screen.height : 'unknown',
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
+    colorDepth: window.screen ? window.screen.colorDepth : 'unknown',
+    deviceMemory: navigator.deviceMemory || 'unknown',
+    hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+    connectionEffectiveType: conn.effectiveType || 'unknown',
+    connectionDownlink: conn.downlink || 'unknown',
+    connectionRtt: conn.rtt || 'unknown',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+    timezoneOffsetMin: new Date().getTimezoneOffset(),
+    timestamp: new Date().toISOString(),
+    performance: {
+      // safe & small subset
+      domContentLoaded: perfNav.domContentLoadedEventEnd || perfNav.responseEnd || null,
+      loadEventEnd: perfNav.loadEventEnd || null,
+    },
+    geo: null // optional geolocation filled later if permitted
+  };
+}
+
+function formatMessage(obj) {
+  // produce a readable plain-text message for Telegram
+  // keep it short — Telegram messages have limits; we won't use markdown by default
+  const lines = [];
+  lines.push('📣 Site Opened');
+  if (obj.ip) lines.push(`IP: ${obj.ip}`);
+  lines.push(`URL: ${obj.url}`);
+  if (obj.referrer) lines.push(`Referrer: ${obj.referrer}`);
+  lines.push(`UA: ${obj.userAgent}`);
+  lines.push(`Lang: ${obj.language} | TZ: ${obj.timezone} (offset ${obj.timezoneOffsetMin} min)`);
+  lines.push(`Screen: ${obj.screenWidth}x${obj.screenHeight}, View: ${obj.innerWidth}x${obj.innerHeight}`);
+  lines.push(`Conn: ${obj.connectionEffectiveType} rtt:${obj.connectionRtt} down:${obj.connectionDownlink}`);
+  if (obj.geo) lines.push(`Geo: ${obj.geo.latitude},${obj.geo.longitude} (acc ${obj.geo.accuracy}m)`);
+  // optionally add performance timing
+  if (obj.performance && (obj.performance.domContentLoaded || obj.performance.loadEventEnd)) {
+    lines.push(`Perf: dcl=${obj.performance.domContentLoaded} load=${obj.performance.loadEventEnd}`);
+  }
+  lines.push(`Time: ${obj.timestamp}`);
+  return lines.join('\n');
+}
+
+async function tryGetGeolocation(timeoutMs = 6000) {
+  if (!('geolocation' in navigator)) return null;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    navigator.geolocation.getCurrentPosition(pos => {
+      clearTimeout(timer);
+      resolve({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
+      });
+    }, err => {
+      clearTimeout(timer);
+      resolve(null);
+    }, { enableHighAccuracy: false, maximumAge: 60_000, timeout: 5000 });
+  });
+}
+
+async function sendToTelegram(text) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const payload = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text: text
+  };
+  // Use POST JSON (Telegram supports POST with JSON)
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'cors'
+    });
+    if (!res.ok) {
+      // If Telegram responds with non-2xx, read body for debugging
+      const txt = await res.text().catch(()=>'');
+      console.warn('Telegram API non-OK response', res.status, txt);
+      return { ok:false, status: res.status, body: txt };
+    }
+    const j = await res.json().catch(()=>null);
+    return { ok:true, body: j };
+  } catch (err) {
+    // likely a CORS block or network error
+    console.error('Telegram send error (likely CORS or network):', err);
+    throw err;
+  }
+}
+
+async function forwardVisitToTelegram() {
+  try {
+    const data = collectClientData();
+    data.ip = await getPublicIP();
+    // optional: try geolocation (user will be prompted)
+    try {
+      const geo = await tryGetGeolocation();
+      if (geo) data.geo = geo;
+    } catch(e) { /* ignore geolocation errors */ }
+
+    const message = formatMessage(data);
+
+    // Try direct send
+    try {
+      await sendToTelegram(message);
+      console.log('sent to Telegram (direct attempt)');
+      return;
+    } catch (err) {
+      console.warn('Direct send failed; attempting fallback via CORS proxy');
+    }
+
+    // Fallback 1: try simple public CORS proxy (may not be reliable)
+    // NOTE: using public proxies is insecure; only for short testing.
+    const corsProxy = 'https://cors.bridged.cc/'; // example: requires path-style proxy; may not be available
+    try {
+      const proxyUrl = corsProxy + `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      const res = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message }),
+      });
+      if (res.ok) {
+        console.log('sent to Telegram via CORS proxy (may be unreliable)');
+        return;
+      } else {
+        console.warn('CORS proxy failed', res.status);
+      }
+    } catch (e) {
+      console.warn('CORS proxy attempt failed', e);
+    }
+
+    // Final fallback: put the collected data into console and localStorage so you can retrieve it
+    console.warn('All direct-forward attempts failed. Saving payload to localStorage "tele_analytics_last" for manual retrieval.');
+    localStorage.setItem('tele_analytics_last', JSON.stringify(data));
+  } catch (e) {
+    console.error('forwardVisitToTelegram error', e);
+  }
+}
+
+// Trigger on page load (only once)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', forwardVisitToTelegram);
+} else {
+  setTimeout(forwardVisitToTelegram, 1000);
+}
+</script>
+
 </body>
 </html>
