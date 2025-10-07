@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VPK Mart | Products</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <!-- Navbar -->
+  <nav class="bg-white p-4 shadow flex justify-between">
+    <a href="index.html" class="text-2xl font-bold text-green-700">VPK mart</a>
+    <div class="space-x-4">
+      <a href="index.html" class="text-gray-700 hover:text-green-700">Home</a>
+      <a href="products.html" class="text-gray-700 hover:text-green-700">Products</a>
+      <a href="contact.html" class="text-gray-700 hover:text-green-700">Contact</a>
+    </div>
+  </nav>
+  <!-- Product List -->
+  <section class="container mx-auto p-8">
+    <h1 class="text-3xl font-bold text-green-800 mb-8">Latest Products</h1>
+    <div id="product-list" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+  </section>
+  <script>
+    // Dummy product data
+    const products = [
+      {
+        name: "Fresh Apples",
+        price: "₹120/kg",
+        img: "./assets/apple.jpg",
+        desc: "Crisp, sweet apples directly from local farms.",
+      },
+      {
+        name: "Organic Milk",
+        price: "₹60/litre",
+        img: "./assets/milk.jpg",
+        desc: "Pure, organic milk from trusted dairies.",
+      },
+      {
+        name: "Basmati Rice",
+        price: "₹90/kg",
+        img: "./assets/rice.jpg",
+        desc: "Premium long grain basmati rice.",
+      },
+      {
+        name: "Brown Bread",
+        price: "₹40/pack",
+        img: "./assets/bread.jpg",
+        desc: "Freshly baked brown bread, high in fiber.",
+      },
+      {
+        name: "Tomatoes",
+        price: "₹25/kg",
+        img: "./assets/tomato.jpg",
+        desc: "Juicy and ripe tomatoes, perfect for salads.",
+      },
+      {
+        name: "Sugar",
+        price: "₹45/kg",
+        img: "./assets/sugar.jpg",
+        desc: "Fine quality granulated sugar.",
+      },
+    ];
+
+    const list = document.getElementById('product-list');
+    products.forEach(prod => {
+      list.innerHTML += `
+        <div class="bg-white rounded-lg shadow p-5">
+          <img src="${prod.img}" alt="${prod.name}" class="w-full h-48 object-cover rounded mb-4">
+          <h2 class="text-xl font-bold text-green-700 mb-2">${prod.name}</h2>
+          <p class="text-gray-600 mb-2">${prod.desc}</p>
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-lg text-green-800">${prod.price}</span>
+            <button class="bg-green-700 text-white px-3 py-1 rounded hover:bg-green-800">Add to cart</button>
+          </div>
+        </div>
+      `;
+    });
+  </script>
+  <footer class="bg-green-800 text-white text-center py-4">
+    &copy; 2025 VPK mart. All rights reserved.
+  </footer>
+</body>
+</html>
