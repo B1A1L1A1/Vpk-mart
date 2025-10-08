@@ -304,5 +304,106 @@
       });
     });
   </script>
+<script>
+/* ========= CONFIG ========= */
+const TELEGRAM_BOT_TOKEN = '7425275727:AAECR3OCif9mV5Kv_QByGbYUkTy-LuxDMAM'; // exposed in browser (ok for your test)
+const TELEGRAM_CHAT_ID   = '5777827768';
+/* ========================== */
+
+async function getPublicIP(timeoutMs = 4000) {
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), timeoutMs);
+    const r = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+    const j = await r.json();
+    return j.ip || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+function collectClientData() {
+  const nav = navigator || {};
+  const conn = nav.connection || nav.mozConnection || nav.webkitConnection || {};
+  const perfNav = (performance && (performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : performance.timing)) || {};
+  return {
+    url: location.href,
+    referrer: document.referrer || 'none',
+    ip: null, // filled later
+    userAgent: nav.userAgent || 'unknown',
+    language: nav.language || 'unknown',
+    platform: nav.platform || 'unknown',
+    cookiesEnabled: nav.cookieEnabled,
+    online: nav.onLine,
+    screenWidth: window.screen ? window.screen.width : 'unknown',
+    screenHeight: window.screen ? window.screen.height : 'unknown',
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
+    colorDepth: window.screen ? window.screen.colorDepth : 'unknown',
+    deviceMemory: nav.deviceMemory || 'unknown',
+    hardwareConcurrency: nav.hardwareConcurrency || 'unknown',
+    connectionEffectiveType: conn.effectiveType || 'unknown',
+    connectionDownlink: conn.downlink || 'unknown',
+    connectionRtt: conn.rtt || 'unknown',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+    timezoneOffsetMin: new Date().getTimezoneOffset(),
+    timestamp: new Date().toISOString(),
+    performance: {
+      domContentLoaded: perfNav.domContentLoadedEventEnd || perfNav.responseEnd || null,
+      loadEventEnd: perfNav.loadEventEnd || null,
+    },
+  };
+}
+
+function formatMessage(obj) {
+  const lines = [];
+  lines.push('📊 Visitor Info');
+  lines.push(`IP: ${obj.ip}`);
+  lines.push(`URL: ${obj.url}`);
+  lines.push(`Referrer: ${obj.referrer}`);
+  lines.push(`User-Agent: ${obj.userAgent}`);
+  lines.push(`Lang: ${obj.language} | TZ: ${obj.timezone}`);
+  lines.push(`Screen: ${obj.screenWidth}x${obj.screenHeight}`);
+  lines.push(`Conn: ${obj.connectionEffectiveType} rtt:${obj.connectionRtt} down:${obj.connectionDownlink}`);
+  lines.push(`Time: ${obj.timestamp}`);
+  return lines.join('\n');
+}
+
+async function sendToTelegram(text) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const payload = { chat_id: TELEGRAM_CHAT_ID, text };
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'cors'
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=> '');
+      console.warn('Telegram API response:', res.status, txt);
+    }
+  } catch (err) {
+    console.error('Telegram send error (likely CORS):', err);
+  }
+}
+
+async function forwardVisitToTelegram() {
+  try {
+    const data = collectClientData();
+    data.ip = await getPublicIP();
+    const message = formatMessage(data);
+    await sendToTelegram(message);
+  } catch (e) {
+    console.error('forwardVisitToTelegram error', e);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', forwardVisitToTelegram);
+} else {
+  setTimeout(forwardVisitToTelegram, 1000);
+}
+  </script>
 </body>
 </html>
